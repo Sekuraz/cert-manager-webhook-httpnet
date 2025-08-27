@@ -77,7 +77,7 @@ type httpnetDNSProviderConfig struct {
 // within a single webhook deployment**.
 // For example, `cloudflare` may be used as the name of a solver.
 func (c *httpnetDNSProviderSolver) Name() string {
-	return "my-custom-solver"
+	return "httpnet"
 }
 
 // Present is responsible for actually presenting the DNS record with the
