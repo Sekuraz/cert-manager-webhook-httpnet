@@ -29,7 +29,7 @@ clean:
 
 .PHONY: build
 build:
-	docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
+	podman build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
 
 .PHONY: rendered-manifest.yaml
 rendered-manifest.yaml: $(OUT)/rendered-manifest.yaml

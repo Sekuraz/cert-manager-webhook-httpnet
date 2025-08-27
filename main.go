@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/providers/dns/httpnet"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
@@ -38,12 +40,10 @@ func main() {
 // interface.
 type httpnetDNSProviderSolver struct {
 	// If a Kubernetes 'clientset' is needed, you must:
-	// 1. uncomment the additional `client` field in this structure below
-	// 2. uncomment the "k8s.io/client-go/kubernetes" import at the top of the file
-	// 3. uncomment the relevant code in the Initialize method below
 	// 4. ensure your webhook's service account has the required RBAC role
 	//    assigned to it for interacting with the Kubernetes APIs you need.
-	//client kubernetes.Clientset
+
+	client *kubernetes.Clientset
 }
 
 // httpnetDNSProviderConfig is a structure that is used to decode into when
@@ -66,8 +66,8 @@ type httpnetDNSProviderConfig struct {
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 
-	//Email           string `json:"email"`
-	//APIKeySecretRef v1alpha1.SecretKeySelector `json:"apiKeySecretRef"`
+	SecretName string `json:"secret"`
+	KeyName    string `json:"key"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -86,16 +86,18 @@ func (c *httpnetDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	cfg, err := loadConfig(ch.Config)
+	token, err := getToken(c.client, ch)
 	if err != nil {
 		return err
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
+	provider, err := getProvider(token)
 
-	// TODO: add code that sets a record in the DNS provider's console
-	return nil
+	if err != nil {
+		return fmt.Errorf("failed to create http.net provider: %w", err)
+	}
+
+	return provider.Present(ch.ResolvedFQDN, ch.Key, ch.ResolvedZone)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -105,8 +107,18 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	// TODO: add code that deletes a record from the DNS provider's console
-	return nil
+	token, err := getToken(c.client, ch)
+	if err != nil {
+		return err
+	}
+
+	provider, err := getProvider(token)
+
+	if err != nil {
+		return fmt.Errorf("failed to create http.net provider: %w", err)
+	}
+
+	return provider.CleanUp(ch.ResolvedFQDN, ch.Key, ch.ResolvedZone)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -119,28 +131,58 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
 func (c *httpnetDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
-	///// YOUR CUSTOM DNS PROVIDER
 
-	//cl, err := kubernetes.NewForConfig(kubeClientConfig)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//c.client = cl
+	k8sclient, err := kubernetes.NewForConfig(kubeClientConfig)
+	if err != nil {
+		return err
+	}
 
-	///// END OF CODE TO MAKE KUBERNETES CLIENTSET AVAILABLE
+	c.client = k8sclient
+
 	return nil
+}
+
+func getProvider(token string) (*httpnet.DNSProvider, error) {
+	config := httpnet.NewDefaultConfig()
+	config.APIKey = token
+
+	provider, err := httpnet.NewDNSProviderConfig(config)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http.net provider: %w", err)
+	}
+	return provider, nil
+}
+
+func getToken(k8sclient *kubernetes.Clientset, challenge *v1alpha1.ChallengeRequest) (string, error) {
+	cfg, err := loadConfig(challenge.Config)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Printf("Decoded configuration %v", cfg)
+
+	namespace := challenge.ResourceNamespace
+
+	sec, err := k8sclient.CoreV1().Secrets(namespace).Get(context.TODO(), cfg.SecretName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get secret %s/%s: %w", namespace, cfg.SecretName, err)
+	}
+
+	data, ok := sec.Data[cfg.KeyName]
+	if !ok {
+		return "", fmt.Errorf("secret %s/%s does not contain key %q", namespace, cfg.SecretName, cfg.KeyName)
+	}
+
+	return string(data), nil
+
 }
 
 // loadConfig is a small helper function that decodes JSON configuration into
 // the typed config struct.
 func loadConfig(cfgJSON *extapi.JSON) (httpnetDNSProviderConfig, error) {
 	cfg := httpnetDNSProviderConfig{}
-	// handle the 'base case' where no configuration has been provided
-	if cfgJSON == nil {
-		return cfg, nil
-	}
+
 	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
 		return cfg, fmt.Errorf("error decoding solver config: %v", err)
 	}
