@@ -2,8 +2,8 @@ GO ?= $(shell which go)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
 
-IMAGE_NAME := "webhook"
-IMAGE_TAG := "latest"
+IMAGE_NAME := cert-manager-webhook-httpnet
+IMAGE_TAG := latest
 
 OUT := $(shell pwd)/_out
 
@@ -29,7 +29,7 @@ clean:
 
 .PHONY: build
 build:
-	podman build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
+	podman build -t "$(IMAGE_REGISTRY)$(IMAGE_NAME):$(IMAGE_TAG)" .
 
 .PHONY: rendered-manifest.yaml
 rendered-manifest.yaml: $(OUT)/rendered-manifest.yaml
