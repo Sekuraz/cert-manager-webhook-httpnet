@@ -20,3 +20,4 @@ _out
 _test
 
 testdata/**/*.yaml
+apiserver.local.config
