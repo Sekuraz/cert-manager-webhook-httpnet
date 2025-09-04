@@ -170,8 +170,6 @@ func getToken(k8sclient *kubernetes.Clientset, challenge *v1alpha1.ChallengeRequ
 		return "", err
 	}
 
-	fmt.Printf("Decoded configuration %v", cfg)
-
 	namespace := challenge.ResourceNamespace
 
 	sec, err := k8sclient.CoreV1().Secrets(namespace).Get(context.TODO(), cfg.SecretName, metav1.GetOptions{})
