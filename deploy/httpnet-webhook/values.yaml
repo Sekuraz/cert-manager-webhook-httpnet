@@ -16,6 +16,8 @@ certManager:
 
 replicaCount: 1
 
+verbose: false
+
 image:
   repository: ghcr.io/sekuraz/cert-manager-webhook-httpnet
   tag: main
