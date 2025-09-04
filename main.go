@@ -170,7 +170,7 @@ func getToken(k8sclient *kubernetes.Clientset, challenge *v1alpha1.ChallengeRequ
 		return "", err
 	}
 
-	namespace := challenge.ResourceNamespace
+	namespace := os.Getenv("POD_NAMESPACE")
 
 	sec, err := k8sclient.CoreV1().Secrets(namespace).Get(context.TODO(), cfg.SecretName, metav1.GetOptions{})
 	if err != nil {
