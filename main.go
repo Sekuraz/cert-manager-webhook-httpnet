@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 
 	"github.com/go-acme/lego/v4/providers/dns/httpnet"
 
@@ -100,9 +101,24 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 
 	// Normalize trailing dots for provider API expectations
 	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
-	fqdn := strings.TrimSuffix(ch.ResolvedFQDN, ".")
+	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
-	return provider.Present(fqdn, ch.Key, zone)
+	klog.Infof("Creating DNS record: %s", fqdn)
+
+	legoError := provider.Present(fqdn, ch.Key, zone)
+
+	if legoError != nil {
+		if strings.Contains(legoError.Error(), "is a duplicate") {
+			klog.Infof("DNS record already created: %s", legoError)
+			return nil
+		}
+
+		klog.Errorf("Error creating DNS record: %s", legoError)
+	} else {
+		klog.Infof("Created DNS record: %s", legoError)
+	}
+
+	return legoError
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -125,9 +141,23 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 
 	// Normalize trailing dots for provider API expectations
 	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
-	fqdn := strings.TrimSuffix(ch.ResolvedFQDN, ".")
+	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
-	return provider.CleanUp(fqdn, ch.Key, zone)
+	klog.Infof("Deleting DNS record: %s", fqdn)
+
+	legoError := provider.CleanUp(fqdn, ch.Key, zone)
+
+	if legoError != nil {
+		if strings.Contains(legoError.Error(), "does not exist") {
+			klog.Infof("DNS record already deleted: %s", legoError)
+			return nil
+		}
+
+		klog.Warningf("Error deleting DNS record: %s", legoError)
+	} else {
+		klog.Infof("Deleted DNS record: %s", legoError)
+	}
+	return legoError
 }
 
 // Initialize will be called when the webhook first starts.
