@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +98,11 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 		return fmt.Errorf("failed to create http.net provider: %w", err)
 	}
 
-	return provider.Present(ch.ResolvedFQDN, ch.Key, ch.ResolvedZone)
+	// Normalize trailing dots for provider API expectations
+	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
+	fqdn := strings.TrimSuffix(ch.ResolvedFQDN, ".")
+
+	return provider.Present(fqdn, ch.Key, zone)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -118,7 +123,11 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 		return fmt.Errorf("failed to create http.net provider: %w", err)
 	}
 
-	return provider.CleanUp(ch.ResolvedFQDN, ch.Key, ch.ResolvedZone)
+	// Normalize trailing dots for provider API expectations
+	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
+	fqdn := strings.TrimSuffix(ch.ResolvedFQDN, ".")
+
+	return provider.CleanUp(fqdn, ch.Key, zone)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -151,6 +160,7 @@ func getProvider(token string) (*httpnet.DNSProvider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http.net provider: %w", err)
 	}
+
 	return provider, nil
 }
 
