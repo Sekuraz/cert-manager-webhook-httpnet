@@ -103,19 +103,19 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
 	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
-	klog.Infof("Creating DNS record: %s", fqdn)
+	klog.Infof("Creating DNS record: %s with key '%s'", ch.ResolvedFQDN, ch.Key)
 
 	legoError := provider.Present(fqdn, ch.Key, zone)
 
 	if legoError != nil {
 		if strings.Contains(legoError.Error(), "is a duplicate") {
-			klog.Infof("DNS record already created: %s", legoError)
+			klog.Infof("DNS record already created: %s", ch.ResolvedFQDN)
 			return nil
 		}
 
 		klog.Errorf("Error creating DNS record: %s", legoError)
 	} else {
-		klog.Infof("Created DNS record: %s", legoError)
+		klog.Infof("Created DNS record: %s", ch.ResolvedFQDN)
 	}
 
 	return legoError
@@ -143,19 +143,19 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
 	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
-	klog.Infof("Deleting DNS record: %s", fqdn)
+	klog.Infof("Deleting DNS record: %s with key '%s'", ch.ResolvedFQDN, ch.Key)
 
 	legoError := provider.CleanUp(fqdn, ch.Key, zone)
 
 	if legoError != nil {
 		if strings.Contains(legoError.Error(), "does not exist") {
-			klog.Infof("DNS record already deleted: %s", legoError)
+			klog.Infof("DNS record already deleted: %s", ch.ResolvedFQDN)
 			return nil
 		}
 
 		klog.Warningf("Error deleting DNS record: %s", legoError)
 	} else {
-		klog.Infof("Deleted DNS record: %s", legoError)
+		klog.Infof("Deleted DNS record: %s", ch.ResolvedFQDN)
 	}
 	return legoError
 }
