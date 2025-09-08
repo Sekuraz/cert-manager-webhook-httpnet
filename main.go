@@ -100,12 +100,11 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 	}
 
 	// Normalize trailing dots for provider API expectations
-	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
 	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
 	klog.Infof("Creating DNS record: %s with key '%s'", ch.ResolvedFQDN, ch.Key)
 
-	legoError := provider.Present(fqdn, ch.Key, zone)
+	legoError := provider.Present(fqdn, "", ch.Key)
 
 	if legoError != nil {
 		if strings.Contains(legoError.Error(), "is a duplicate") {
@@ -140,12 +139,11 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 	}
 
 	// Normalize trailing dots for provider API expectations
-	zone := strings.TrimSuffix(ch.ResolvedZone, ".")
 	fqdn := strings.TrimSuffix(ch.DNSName, ".")
 
 	klog.Infof("Deleting DNS record: %s with key '%s'", ch.ResolvedFQDN, ch.Key)
 
-	legoError := provider.CleanUp(fqdn, ch.Key, zone)
+	legoError := provider.CleanUp(fqdn, "", ch.Key)
 
 	if legoError != nil {
 		if strings.Contains(legoError.Error(), "does not exist") {
