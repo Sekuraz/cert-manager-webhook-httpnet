@@ -196,6 +196,9 @@ func (c *httpnetDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 
 	_, err = client.UpdateZone(ctx, req)
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil
+		}
 		return fmt.Errorf("httpnet: %w", err)
 	}
 
