@@ -3,10 +3,11 @@ module github.com/Sekuraz/cert-manager-webhook-httpnet
 go 1.25.0
 
 require (
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cert-manager/cert-manager v1.18.2
-	github.com/cert-manager/webhook-example v0.0.0-20250814151145-2cf1b787998c
 	github.com/go-acme/lego/v4 v4.25.2
 	k8s.io/apiextensions-apiserver v0.32.0
+	k8s.io/apimachinery v0.32.0
 	k8s.io/client-go v0.32.0
 )
 
@@ -17,7 +18,6 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -99,7 +99,6 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.32.0 // indirect
-	k8s.io/apimachinery v0.32.0 // indirect
 	k8s.io/apiserver v0.32.0 // indirect
 	k8s.io/component-base v0.32.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect

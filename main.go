@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,6 +135,9 @@ func (c *httpnetDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 
 	_, err = client.UpdateZone(ctx, req)
 	if err != nil {
+		if strings.Contains(err.Error(), "is a duplicate") {
+			return nil
+		}
 		return fmt.Errorf("httpnet: %w", err)
 	}
 
